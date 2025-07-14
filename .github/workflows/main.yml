@@ -8,7 +8,8 @@ on:
 jobs:
   # Job 1: Menjalankan tes dan analisis kode
   test_and_analyze:
-    runs-on: ubuntu-latest # Menggunakan runner yang disediakan GitHub
+    # Menjalankan semua job di runner lokal Anda
+    runs-on: self-hosted 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -24,19 +25,18 @@ jobs:
       - name: Run tests
         run: npm test
 
-      # --- Langkah SonarQube Dinonaktifkan Sementara ---
-      # Langkah ini gagal karena runner GitHub di cloud tidak bisa mengakses SonarQube di localhost Anda.
-      # Untuk solusi lengkap, Anda perlu menggunakan SonarCloud.io atau self-hosted runner.
-      # - name: SonarQube Scan
-      #   uses: SonarSource/sonarqube-scan-action@master
-      #   env:
-      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      #     SONAR_HOST_URL: http://<IP-PUBLIK-ANDA>:9000
+      # Langkah SonarQube sekarang diaktifkan kembali
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
   # Job 2: Membangun dan mendorong image Docker
   build_and_push:
-    needs: test_and_analyze # Job ini berjalan setelah test_and_analyze selesai
-    runs-on: ubuntu-latest
+    needs: test_and_analyze
+    # Menjalankan semua job di runner lokal Anda
+    runs-on: self-hosted
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -52,14 +52,13 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/uas-devops-app:latest # Ganti dengan nama image Anda
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/hello-world:latest # Ganti dengan nama image Anda
 
-  # Job 3: Deploy ke Kubernetes (Membutuhkan Self-Hosted Runner)
-  # Catatan: Job ini tidak akan berjalan kecuali Anda menyiapkan self-hosted runner.
-  # Untuk simulasi, Anda bisa menonaktifkan job ini dan melakukan deploy manual.
+  # Job 3: Deploy ke Kubernetes
   deploy:
     needs: build_and_push
-    runs-on: self-hosted # Memberitahu GitHub untuk menggunakan runner lokal Anda
+    # Menjalankan semua job di runner lokal Anda
+    runs-on: self-hosted
     steps:
       - name: Deploy to Minikube
         run: |
