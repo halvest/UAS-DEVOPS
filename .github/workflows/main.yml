@@ -34,7 +34,7 @@ jobs:
             -e SONAR_TOKEN="${{ secrets.SONAR_TOKEN }}" `
             -v "${{ github.workspace }}:/usr/src" `
             sonarsource/sonar-scanner-cli
-        shell: pwsh
+        shell: powershell
 
   # Job 2: Membangun dan mendorong image Docker
   build_and_push:
