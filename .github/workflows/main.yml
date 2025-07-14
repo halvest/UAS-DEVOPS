@@ -25,12 +25,16 @@ jobs:
       - name: Run tests
         run: npm test
 
-      # Langkah SonarQube sekarang diaktifkan kembali
+      # [FIX] Menjalankan SonarQube Scan di dalam container Docker
+      # untuk menghindari masalah path di Windows.
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@master
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: |
+          docker run --rm --network=host `
+            -e SONAR_HOST_URL="${{ secrets.SONAR_HOST_URL }}" `
+            -e SONAR_TOKEN="${{ secrets.SONAR_TOKEN }}" `
+            -v "${{ github.workspace }}:/usr/src" `
+            sonarsource/sonar-scanner-cli
+        shell: pwsh
 
   # Job 2: Membangun dan mendorong image Docker
   build_and_push:
@@ -52,7 +56,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/hello-world:latest # Ganti dengan nama image Anda
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/hello-world:latest
 
   # Job 3: Deploy ke Kubernetes
   deploy:
@@ -63,4 +67,4 @@ jobs:
       - name: Deploy to Minikube
         run: |
           echo "Deploying to Minikube..."
-          kubectl set image deployment/login-app-deployment web-app=${{ secrets.DOCKERHUB_USERNAME }}/uas-devops-app:latest
+          kubectl set image deployment/login-app-deployment web-app=${{ secrets.DOCKERHUB_USERNAME }}/hello-world:latest
