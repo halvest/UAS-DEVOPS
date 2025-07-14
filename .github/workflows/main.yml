@@ -51,14 +51,14 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/uas-devops-app:latest # Ganti dengan nama image Anda
 
-# Job 3: Deploy ke Kubernetes (Membutuhkan Self-Hosted Runner)
-# Catatan: Job ini tidak akan berjalan kecuali Anda menyiapkan self-hosted runner.
-# Untuk simulasi, Anda bisa menonaktifkan job ini dan melakukan deploy manual.
-deploy:
-  needs: build_and_push
-  runs-on: self-hosted # Memberitahu GitHub untuk menggunakan runner lokal Anda
-  steps:
-    - name: Deploy to Minikube
-      run: |
-        echo "Deploying to Minikube..."
-        kubectl set image deployment/login-app-deployment web-app=${{ secrets.DOCKERHUB_USERNAME }}/uas-devops-app:latest
+  # Job 3: Deploy ke Kubernetes (Membutuhkan Self-Hosted Runner)
+  # Catatan: Job ini tidak akan berjalan kecuali Anda menyiapkan self-hosted runner.
+  # Untuk simulasi, Anda bisa menonaktifkan job ini dan melakukan deploy manual.
+  deploy:
+    needs: build_and_push
+    runs-on: self-hosted # Memberitahu GitHub untuk menggunakan runner lokal Anda
+    steps:
+      - name: Deploy to Minikube
+        run: |
+          echo "Deploying to Minikube..."
+          kubectl set image deployment/login-app-deployment web-app=${{ secrets.DOCKERHUB_USERNAME }}/uas-devops-app:latest
