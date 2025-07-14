@@ -1,0 +1,64 @@
+name: CI/CD Pipeline DevOps
+
+# Pemicu: pipeline berjalan saat ada push ke branch 'main'
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  # Job 1: Menjalankan tes dan analisis kode
+  test_and_analyze:
+    runs-on: ubuntu-latest # Menggunakan runner yang disediakan GitHub
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }} # Anda perlu mengatur ini jika SonarQube tidak di localhost
+
+  # Job 2: Membangun dan mendorong image Docker
+  build_and_push:
+    needs: test_and_analyze # Job ini berjalan setelah test_and_analyze selesai
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/uas-devops-app:latest # Ganti dengan nama image Anda
+
+# Job 3: Deploy ke Kubernetes (Membutuhkan Self-Hosted Runner)
+# Catatan: Job ini tidak akan berjalan kecuali Anda menyiapkan self-hosted runner.
+# Untuk simulasi, Anda bisa menonaktifkan job ini dan melakukan deploy manual.
+deploy:
+  needs: build_and_push
+  runs-on: self-hosted # Memberitahu GitHub untuk menggunakan runner lokal Anda
+  steps:
+    - name: Deploy to Minikube
+      run: |
+        echo "Deploying to Minikube..."
+        kubectl set image deployment/login-app-deployment web-app=${{ secrets.DOCKERHUB_USERNAME }}/uas-devops-app:latest
