@@ -1,8 +1,23 @@
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
+const client = require('prom-client'); // Import prom-client
 const app = express();
-const PORT = 3000;
+
+// Buat registry untuk metrik
+const register = new client.Registry();
+register.setDefaultLabels({
+  app: 'uas-devops-app'
+});
+client.collectDefaultMetrics({ register });
+
+// Buat metrik kustom: counter untuk total request login
+const loginCounter = new client.Counter({
+  name: 'login_requests_total',
+  help: 'Total login requests processed',
+  labelNames: ['status']
+});
+register.registerMetric(loginCounter);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -17,6 +32,17 @@ app.use(session({
 }));
 
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Endpoint /metrics untuk di-scrape oleh Prometheus
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', register.contentType);
+    res.end(await register.metrics());
+  } catch (ex) {
+    res.status(500).end(ex);
+  }
+});
+
 app.get('/', (req, res) => {
     if (req.session.isLoggedIn) {
         res.redirect('/dashboard');
@@ -30,8 +56,10 @@ app.post('/login', (req, res) => {
   if (username === 'admin' && password === 'admin1234') {
     req.session.isLoggedIn = true;
     req.session.username = username; 
+    loginCounter.inc({ status: 'success' }); // Increment counter
     res.status(200).json({ success: true, message: 'Login berhasil! Mengarahkan...' });
   } else {
+    loginCounter.inc({ status: 'error' }); // Increment counter
     res.status(401).json({ success: false, message: 'Username atau password salah.' });
   }
 });
@@ -53,11 +81,5 @@ app.post('/logout', (req, res) => {
     res.status(200).json({ success: true, message: 'Logout berhasil.' });
   });
 });
-
-// app.listen(PORT, () => {
-//   console.log(`✅ Server berjalan dengan lancar di http://localhost:${PORT}`);
-//   console.log("   Folder 'public' sedang disajikan sebagai file statis.");
-//   console.log("   Tekan CTRL+C untuk menghentikan server.");
-// });
 
 module.exports = app;
