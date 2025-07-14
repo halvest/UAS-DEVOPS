@@ -24,11 +24,14 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@master
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }} # Anda perlu mengatur ini jika SonarQube tidak di localhost
+      # --- Langkah SonarQube Dinonaktifkan Sementara ---
+      # Langkah ini gagal karena runner GitHub di cloud tidak bisa mengakses SonarQube di localhost Anda.
+      # Untuk solusi lengkap, Anda perlu menggunakan SonarCloud.io atau self-hosted runner.
+      # - name: SonarQube Scan
+      #   uses: SonarSource/sonarqube-scan-action@master
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      #     SONAR_HOST_URL: http://<IP-PUBLIK-ANDA>:9000
 
   # Job 2: Membangun dan mendorong image Docker
   build_and_push:
