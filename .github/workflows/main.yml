@@ -8,7 +8,8 @@ on:
 jobs:
   # Job 1: Menjalankan tes dan analisis kode
   test_and_analyze:
-    runs-on: ubuntu-latest # Menggunakan runner yang disediakan GitHub
+    # Menjalankan semua job di runner lokal Anda
+    runs-on: self-hosted 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -24,16 +25,22 @@ jobs:
       - name: Run tests
         run: npm test
 
+      # [FIX] Menjalankan SonarQube Scan di dalam container Docker
+      # untuk menghindari masalah path di Windows.
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@master
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }} # Anda perlu mengatur ini jika SonarQube tidak di localhost
+        run: |
+          docker run --rm --network=host `
+            -e SONAR_HOST_URL="${{ secrets.SONAR_HOST_URL }}" `
+            -e SONAR_TOKEN="${{ secrets.SONAR_TOKEN }}" `
+            -v "${{ github.workspace }}:/usr/src" `
+            sonarsource/sonar-scanner-cli
+        shell: powershell
 
   # Job 2: Membangun dan mendorong image Docker
   build_and_push:
-    needs: test_and_analyze # Job ini berjalan setelah test_and_analyze selesai
-    runs-on: ubuntu-latest
+    needs: test_and_analyze
+    # Menjalankan semua job di runner lokal Anda
+    runs-on: self-hosted
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -49,16 +56,15 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/uas-devops-app:latest # Ganti dengan nama image Anda
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/hello-world:latest
 
-# Job 3: Deploy ke Kubernetes (Membutuhkan Self-Hosted Runner)
-# Catatan: Job ini tidak akan berjalan kecuali Anda menyiapkan self-hosted runner.
-# Untuk simulasi, Anda bisa menonaktifkan job ini dan melakukan deploy manual.
-deploy:
-  needs: build_and_push
-  runs-on: self-hosted # Memberitahu GitHub untuk menggunakan runner lokal Anda
-  steps:
-    - name: Deploy to Minikube
-      run: |
-        echo "Deploying to Minikube..."
-        kubectl set image deployment/login-app-deployment web-app=${{ secrets.DOCKERHUB_USERNAME }}/uas-devops-app:latest
+  # Job 3: Deploy ke Kubernetes
+  deploy:
+    needs: build_and_push
+    # Menjalankan semua job di runner lokal Anda
+    runs-on: self-hosted
+    steps:
+      - name: Deploy to Minikube
+        run: |
+          echo "Deploying to Minikube..."
+          kubectl set image deployment/login-app-deployment web-app=${{ secrets.DOCKERHUB_USERNAME }}/hello-world:latest
