@@ -21,7 +21,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run tests
+      - name: Run tests with coverage
+        # Menjalankan skrip 'test' dari package.json yang sekarang menghasilkan coverage
         run: npm test
 
       - name: SonarQube Scan
@@ -30,7 +31,7 @@ jobs:
             -e SONAR_HOST_URL="${{ secrets.SONAR_HOST_URL }}" `
             -e SONAR_TOKEN="${{ secrets.SONAR_TOKEN }}" `
             -v "${{ github.workspace }}:/usr/src" `
-            sonarsource/sonar-scanner-cli
+            sonarsource/sonar-scanner-cli -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
         shell: powershell
 
   build_and_push:
