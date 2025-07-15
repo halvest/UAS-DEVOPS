@@ -11,7 +11,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0 # FIX: Menghilangkan warning shallow clone
+          fetch-depth: 0 
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
@@ -22,16 +22,17 @@ jobs:
         run: npm install
 
       - name: Run tests with coverage
-        # Menjalankan skrip 'test' dari package.json yang sekarang menghasilkan coverage
         run: npm test
 
+      # [FIX] Menjalankan SonarScanner tanpa argumen.
+      # Konfigurasi akan dibaca dari sonar-project.properties
       - name: SonarQube Scan
         run: |
           docker run --rm --network=host `
             -e SONAR_HOST_URL="${{ secrets.SONAR_HOST_URL }}" `
             -e SONAR_TOKEN="${{ secrets.SONAR_TOKEN }}" `
             -v "${{ github.workspace }}:/usr/src" `
-            sonarsource/sonar-scanner-cli -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+            sonarsource/sonar-scanner-cli
         shell: powershell
 
   build_and_push:
@@ -41,7 +42,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0 # FIX: Menghilangkan warning shallow clone
+          fetch-depth: 0 
 
       - name: Login to Docker Hub
         uses: docker/login-action@v2
