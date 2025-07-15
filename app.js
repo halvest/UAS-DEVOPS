@@ -1,8 +1,10 @@
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
-const client = require('prom-client'); // Import prom-client
+const client = require('prom-client'); 
 const app = express();
+const VALID_USERNAME = process.env.ADMIN_USER || 'admin';
+const VALID_PASSWORD = process.env.ADMIN_PASS || 'admin1234';
 
 // Buat registry untuk metrik
 const register = new client.Registry();
@@ -53,7 +55,8 @@ app.get('/', (req, res) => {
 
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
-  if (username === 'admin' && password === 'admin1234') {
+  // [FIX] Bandingkan dengan variabel, bukan string langsung
+  if (username === VALID_USERNAME && password === VALID_PASSWORD) {
     req.session.isLoggedIn = true;
     req.session.username = username; 
     loginCounter.inc({ status: 'success' }); // Increment counter
