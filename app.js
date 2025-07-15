@@ -2,7 +2,7 @@ const express = require('express');
 const session = require('express-session');
 const path = require('path');
 const bcrypt = require('bcrypt');
-const db = require('./database.js'); // Impor koneksi database
+const db = require('./database.js'); 
 const client = require('prom-client');
 const app = express();
 
@@ -10,12 +10,22 @@ const app = express();
 const register = new client.Registry();
 register.setDefaultLabels({ app: 'uas-devops-app' });
 client.collectDefaultMetrics({ register });
+
 const loginCounter = new client.Counter({
     name: 'login_requests_total',
     help: 'Total login requests processed',
     labelNames: ['status']
 });
 register.registerMetric(loginCounter);
+
+// [BARU] Metrik Histogram untuk durasi request
+const httpRequestDurationMicroseconds = new client.Histogram({
+    name: 'http_request_duration_seconds',
+    help: 'Duration of HTTP requests in seconds',
+    labelNames: ['method', 'route', 'code'],
+    buckets: [0.1, 0.5, 1, 1.5] 
+});
+register.registerMetric(httpRequestDurationMicroseconds);
 
 // --- Middleware ---
 app.use(express.json());
@@ -27,6 +37,15 @@ app.use(session({
     cookie: { secure: false, maxAge: 3600000 }
 }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// [BARU] Middleware untuk mengukur durasi
+app.use((req, res, next) => {
+  const end = httpRequestDurationMicroseconds.startTimer();
+  res.on('finish', () => {
+    end({ route: req.route ? req.route.path : req.path, code: res.statusCode, method: req.method });
+  });
+  next();
+});
 
 // --- Routes ---
 app.get('/metrics', async (req, res) => {
@@ -46,7 +65,6 @@ app.get('/', (req, res) => {
     }
 });
 
-// [MODIFIED] Endpoint Login dengan Database
 app.post('/login', (req, res) => {
     const { username, password } = req.body;
     db.get(`SELECT * FROM users WHERE username = ?`, [username], (err, user) => {
