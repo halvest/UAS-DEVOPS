@@ -7,14 +7,11 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      # Volume untuk data agar tidak hilang saat restart
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-    # Agar Prometheus bisa "melihat" kluster Kubernetes Anda
     extra_hosts:
-      - "host.docker.internal:host-gateway" 
+      - "host.docker.internal:host-gateway"
     networks:
       - monitoring-net
 
@@ -23,7 +20,19 @@ services:
     container_name: loki
     ports:
       - "3100:3100"
+    volumes:
+      - ./loki-config.yaml:/etc/loki/local-config.yaml
     command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - monitoring-net
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    volumes:
+      - ./promtail-config.yaml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yml
     networks:
       - monitoring-net
 
@@ -31,12 +40,13 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
-      - "3001:3000" # Menggunakan port 3001 agar tidak bentrok dengan aplikasi Anda
+      - "3001:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     depends_on:
       - loki
       - prometheus
+      - promtail
     networks:
       - monitoring-net
 

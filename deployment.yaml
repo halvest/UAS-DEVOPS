@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: login-app-deployment
+  labels:
+    app: login-app 
 spec:
   replicas: 1
   selector:
@@ -11,9 +13,13 @@ spec:
     metadata:
       labels:
         app: login-app
+      annotations:
+        prometheus.io/scrape: 'true' 
+        prometheus.io/port: '3000'
+        prometheus.io/path: '/metrics'
     spec:
       containers:
       - name: web-app
-        image: hello-world # Ini akan diganti oleh pipeline
+        image: daizean/uas-devops-app:latest
         ports:
         - containerPort: 3000
