@@ -7,8 +7,7 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0 # FIX: Menghilangkan warning shallow clone
+
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
